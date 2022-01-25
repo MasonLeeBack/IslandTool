@@ -15,5 +15,12 @@ MxSerializable* classesList[] = {
 	new LegoEntityPresenter(),
 	new LegoModelPresenter(),
 	new LegoPathPresenter(),
-    new LegoWorldPresenter()
+	new LegoWorldPresenter(),
+	new LegoTexturePresenter(),
+	new LegoLoopingAnimPresenter(),
+	new LegoAnimMMPresenter(),
+	new Lego3DWavePresenter(),
+	new LegoPhonemePresenter(),
+	new MxCompositeMediaPresenter(),
+	new MxControlPresenter()
 };

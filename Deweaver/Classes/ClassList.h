@@ -13,11 +13,22 @@ File name: ClassList.h
 // MxSerializable should always be on top
 #include "MxSerializable.h"
 
+#include "Lego3DWavePresenter.h"
 #include "LegoActorPresenter.h"
+#include "LegoAnimMMPresenter.h"
 #include "LegoAnimPresenter.h"
 #include "LegoEntityPresenter.h"
+#include "LegoLoopingAnimPresenter.h"
 #include "LegoModelPresenter.h"
 #include "LegoPathPresenter.h"
+#include "LegoPhonemePresenter.h"
+#include "LegoTexturePresenter.h"
 #include "LegoWorldPresenter.h"
+
+#include "MxCompositeMediaPresenter.h"
+#include "MxControlPresenter.h"
+
+#define ClassListSize 12
+extern MxSerializable* classesList[];
 
 #endif // _CLASSLIST_H_

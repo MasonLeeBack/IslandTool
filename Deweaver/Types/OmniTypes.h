@@ -31,4 +31,21 @@ struct OmniMesh {
 	uint32_t*   Faces;
 };
 
+struct Vector3 {
+	double X;
+	double Y;
+	double Z;
+
+	bool operator==(const Vector3& vec) {
+		return X == vec.X && Y == vec.Y && Z == vec.Z;
+	}
+
+	bool operator!=(const Vector3& vec) {
+		if (X != vec.X || Y != vec.Y || Z != vec.Z) {
+			return true;
+		}
+		return false;
+	}
+};
+
 #endif // _OMNITYPES_H_

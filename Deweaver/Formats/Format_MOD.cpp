@@ -48,7 +48,7 @@ void Deweave_MOD(std::ifstream* stream)
 
 	// ROI data
 	ROIData* roi = new ROIData[modelHeader.NumberOfROIs];
-	for (int i = 0; i <= modelHeader.NumberOfROIs - 1; i++) {
+	for (unsigned int i = 0; i <= modelHeader.NumberOfROIs - 1; i++) {
 		printf("\nROI %i:\n", i);
 
 		stream->read((char*)&roi[i].NumberOfLODs, sizeof(uint32_t));
@@ -64,7 +64,7 @@ void Deweave_MOD(std::ifstream* stream)
 		printf("    Number of Meshes: %lu\n", roi[i].NumMeshes);
 
 		OmniMesh* mesh = new OmniMesh[roi[i].NumMeshes];
-		for (int j = 0; j <= roi[i].NumMeshes - 1; j++) {
+		for (unsigned int j = 0; j <= roi[i].NumMeshes - 1; j++) {
 			printf("    Mesh %i:\n", j);
 
 			stream->read((char*)&mesh[j].Color, sizeof(OmniColor));
@@ -78,7 +78,7 @@ void Deweave_MOD(std::ifstream* stream)
 
 			mesh[j].Vertices = new OmniVertex[mesh[j].NumVertices];
 			printf("        Vertices:\n");
-			for (int k = 0; k <= mesh[j].NumVertices - 1; k++) {
+			for (unsigned int k = 0; k <= mesh[j].NumVertices - 1; k++) {
 				stream->read((char*)&mesh[j].Vertices[k], sizeof(OmniVertex));
 				printf("            V%i{%f, %f, %f}\n", k, mesh[j].Vertices[k].X, mesh[j].Vertices[k].Y, mesh[j].Vertices[k].Z);
 			}
@@ -87,7 +87,7 @@ void Deweave_MOD(std::ifstream* stream)
 			printf("        Face count: %lu\n", mesh[j].NumFaces);
 			printf("        Faces:\n");
 			mesh[j].Faces = new uint32_t[mesh[j].NumFaces];
-			for (int k = 0; k <= mesh[j].NumFaces - 1; k++) {
+			for (unsigned int k = 0; k <= mesh[j].NumFaces - 1; k++) {
 				stream->read((char*)&mesh[j].Faces[k], sizeof(uint32_t));
 				printf("            F%i %lu\n", k, mesh[j].Faces[k]);
 			}

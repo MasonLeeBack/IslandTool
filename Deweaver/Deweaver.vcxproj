@@ -153,12 +153,19 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Classes\ClassList.h" />
+    <ClInclude Include="Classes\Lego3DWavePresenter.h" />
     <ClInclude Include="Classes\LegoActorPresenter.h" />
+    <ClInclude Include="Classes\LegoAnimMMPresenter.h" />
     <ClInclude Include="Classes\LegoAnimPresenter.h" />
     <ClInclude Include="Classes\LegoEntityPresenter.h" />
+    <ClInclude Include="Classes\LegoLoopingAnimPresenter.h" />
     <ClInclude Include="Classes\LegoModelPresenter.h" />
     <ClInclude Include="Classes\LegoPathPresenter.h" />
+    <ClInclude Include="Classes\LegoPhonemePresenter.h" />
+    <ClInclude Include="Classes\LegoTexturePresenter.h" />
     <ClInclude Include="Classes\LegoWorldPresenter.h" />
+    <ClInclude Include="Classes\MxCompositeMediaPresenter.h" />
+    <ClInclude Include="Classes\MxControlPresenter.h" />
     <ClInclude Include="Classes\MxSerializable.h" />
     <ClInclude Include="Formats\Format_MOD.h" />
     <ClInclude Include="Formats\Format_SI.h" />
