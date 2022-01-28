@@ -116,9 +116,9 @@ MxObject DeweaveObject(std::ifstream* stream, int indent, bool child)
     }
 
     // Coordinate Data
-    stream->read((char*)&mxObject.Position, sizeof(Vector3));
-    stream->read((char*)&mxObject.Direction, sizeof(Vector3));
-    stream->read((char*)&mxObject.Up, sizeof(Vector3));
+    mxObject.Position.Deserialize(stream);
+    mxObject.Direction.Deserialize(stream);
+    mxObject.Up.Deserialize(stream);
 
     // Display position, direction, and Up value if not their default values
     if (mxObject.Position != Vector3{ 0,0,0 }) {
@@ -176,40 +176,116 @@ MxObject DeweaveObject(std::ifstream* stream, int indent, bool child)
     return mxObject;
 }
 
+void WriteHeader(std::ofstream* stream, uint32_t fileFormat, bool secondPass, const char* fileName = nullptr) {
+    // Audio (WAV)
+    if (fileFormat == 'VAW ') {
+        if (secondPass == true) {
+            stream->seekp(0, std::ios::end);
+            unsigned int end = (unsigned int)stream->tellp();
+
+            RIFF riffHeader;
+            riffHeader.Format = 'EVAW';
+            SubchunkHeader subchunk = { ' tmf', 16 };
+
+            stream->seekp(0, std::ios::beg);
+            riffHeader.Serialize(stream);
+            stream->write((char*)&subchunk, sizeof(SubchunkHeader));
+
+            // Move subchunk 1 data left to add subchunk 2 identifier
+            char* subchunk1Data = new char[16];
+
+            std::ifstream is(fileName, std::ios::binary);
+            is.seekg(24, std::ios::beg);
+            is.read(subchunk1Data, 16);
+            is.close();
+
+            stream->write(subchunk1Data, 16);
+
+            // Add subchunk 2 identifier
+            stream->write("data", 4);
+        }
+        else {
+            const char* padding = "";
+            stream->write(padding, 24);
+        }
+    }
+    // Bitmaps (STL)
+    if (fileFormat == 'LTS ') {
+        if (secondPass == true) {
+            stream->seekp(0, std::ios::end);
+
+            uint16_t Signature = 'MB';
+            uint32_t FileSize = (uint32_t)stream->tellp();
+            uint32_t Reserved = 0x00000000;
+            uint32_t Offset = 54;
+
+            stream->seekp(0, std::ios::beg);
+
+            stream->write((char*)&Signature, sizeof(uint16_t));
+            stream->write((char*)&FileSize, sizeof(uint32_t));
+            stream->write((char*)&Reserved, sizeof(uint32_t));
+            stream->write((char*)&Offset, sizeof(uint32_t));
+        }
+        else {
+            const char* padding = "";
+            stream->write(padding, 14);
+        }
+    }
+}
+
 struct ExtractOperation {
     std::ofstream stream;
+    const char* fileName;
     uint32_t streamID;
     bool finished = false;
 };
-void ExtractObject(ExtractOperation* operations, MxObject* objects, unsigned int Count, std::ifstream* stream)
+void ExtractObject(ExtractOperation* operations, std::vector<MxObject> objects, std::ifstream* stream)
 {
-    for (unsigned int j = 0; j < Count; j++) {
-        operations[j].stream = std::ofstream(objects[j].Name, std::ios_base::binary);
+    for (unsigned int j = 0; j < objects.size(); j++) {
+        if (objects[j].ObjectType == ObjectDef::Parallel || objects[j].ObjectType == ObjectDef::Linear) {
+            operations[j].finished = true;
+            break;
+        }
+        if (!strcmp("inline", objects[j].FileName)) {
+            operations[j].finished = true;
+            break;
+        }
+
+        operations[j].fileName = strrchr(objects[j].FileName, '\\') + 1;
+        operations[j].stream = std::ofstream(operations[j].fileName, std::ios::binary);
         operations[j].streamID = objects[j].StreamID;
+
+        WriteHeader(&operations[j].stream, objects[j].FileFormat, false);
     }
 
-    MxList_Small listHeader = {};
-    stream->read((char*)&listHeader, sizeof(MxList_Small));
+    SubchunkHeader listHeader = {};
+    stream->read((char*)&listHeader, sizeof(SubchunkHeader));
 
-    printf("Deweaving %lu objects (%lu bytes)\n", Count, listHeader.ChunkSize);
+    printf("Deweaving %lu objects (%lu bytes)\n", objects.size(), listHeader.ChunkSize);
 
-    // Pass the MxDa object
+    // Pass the MxDa object (not a valid subchunk)
     uint32_t* test;
     stream->read((char*)&test, sizeof(uint32_t));
 
     if ((int)stream->tellg() % 2 != 0) {
-        stream->seekg(1, std::ios_base::cur);
+        stream->seekg(1, std::ios::cur);
     }
 
     while (true) {
         // Check all Extraction operations
         int finishedOperations = 0;
-        for (unsigned int j = 0; j < Count; j++) {
+        for (unsigned int j = 0; j < objects.size(); j++) {
             if (operations[j].finished == true) {
                 finishedOperations++;
+
+                // Write the file header if necessary
+                WriteHeader(&operations[j].stream, objects[j].FileFormat, true, operations[j].fileName);
+
+                operations[j].stream.close();
             }
         }
-        if (finishedOperations == Count) {
+        printf("finished: %lu, total %lu\n",finishedOperations, objects.size());
+        if (finishedOperations == objects.size()) {
             break;
         }
 
@@ -217,28 +293,28 @@ void ExtractObject(ExtractOperation* operations, MxObject* objects, unsigned int
         stream->read((char*)&chunk, sizeof(MxChunk));
        
         if (chunk.Signature != MXCHUNK_TAG) {
-            // This is very hacky and still using the Chunk structure, but it'll work.
             if (chunk.Signature == ' dap') {
-                stream->seekg(chunk.ChunkSize - 14, std::ios_base::cur);
+                stream->seekg(chunk.ChunkSize - 14, std::ios::cur);
                 continue;
             }
             else {
-                printf("ERROR: Not a valid chunk!!! 0x%X at address 0x%X\n", chunk.Signature, (int)stream->tellg() - sizeof(MxChunk));
+                printf("ERROR: Not a valid chunk!!! 0x%X at address 0x%X\n", chunk.Signature, (unsigned int)stream->tellg() - sizeof(MxChunk));
             }
 
             break;
         }
 
-        printf("stream: %lu, time: %ld, size: %lu\n", chunk.StreamID, chunk.Milliseconds, chunk.ChunkSize);
+        printf("0x%X stream: %lu, time: %ld, size: %lu\n", (unsigned int)stream->tellg(), chunk.StreamID, chunk.Milliseconds, chunk.ChunkSize);
 
         // Store chunk data
         char* chunkData = new char[chunk.ChunkSize - 14];
         stream->read(chunkData, chunk.ChunkSize - 14);
 
         // Check stream IDs
-        for (unsigned int j = 0; j < Count; j++) {
+        for (unsigned int j = 0; j < objects.size(); j++) {
             if (operations[j].streamID == chunk.StreamID) {
                 if (chunk.Flags & MX_FLAG_CHUNK_ENDING) {
+                    printf("streamID %lu finished\n", operations[j].streamID);
                     operations[j].finished = true;
                 }
 
@@ -257,19 +333,15 @@ void ExtractObject(ExtractOperation* operations, MxObject* objects, unsigned int
 
 void Deweave_SI(std::ifstream* stream, char* outDestination)
 {
-    RiffHeader riffHeader = {};
-
-    stream->read((char*)&riffHeader, sizeof(RiffHeader));
+    RIFF riffHeader;
+    riffHeader.Deserialize(stream);
 
     // Verify RIFF header, and RIFF subtype
-    if (riffHeader.Signature != RIFFHEADER_TAG) {
+    if (riffHeader.Identifier != RIFF_IDENTIFIER) {
         printf("Not a RIFF file!\n");
         return;
     }
-
-    printf("File size: %lu bytes\n", riffHeader.Size);
-
-    if (riffHeader.Subtype != 'INMO') {
+    if (riffHeader.Format != 'INMO') {
         printf("RIFF is not an OMNI subtype!\n");
         return;
     }
@@ -326,7 +398,7 @@ void Deweave_SI(std::ifstream* stream, char* outDestination)
     for (unsigned int i = 0; i < OffsetsCount; i++) {
         if (offsetList[i] != 0) {
             MxStream mxStream = {};
-            stream->seekg(offsetList[i], std::ios_base::beg);
+            stream->seekg(offsetList[i], std::ios::beg);
             stream->read((char*)&mxStream, sizeof(MxStream));
 
             if (mxStream.Signature != MXSTREAM_TAG) {
@@ -349,12 +421,31 @@ void Deweave_SI(std::ifstream* stream, char* outDestination)
             continue;
         }
 
+        printf("test %s\n",objects[i].Name);
+
         if (objects[i].ObjectType == ObjectDef::Parallel || objects[i].ObjectType == ObjectDef::Linear)
         {
             stream->seekg(objects[i].Offset + 8 + objects[i].ObjectSize);
 
-            ExtractOperation* operations = new ExtractOperation[objects[i].ChildrenCount];
-            ExtractObject(operations, objects[i].Children, objects[i].ChildrenCount, stream);
+            // We have to recursively check for children here since they're
+            // added to the main streaming LIST.
+            std::vector<MxObject> children;
+
+            // Add recursive children to the object count
+            for (unsigned int j = 0; j < objects[i].ChildrenCount; j++) {
+                if (objects[i].Children[j].ChildrenCount != 0) {
+                    for (unsigned int k = 0; k < objects[i].Children[j].ChildrenCount; k++) {
+                        children.push_back(objects[i].Children[j].Children[k]);
+                    }
+                }
+                children.push_back(objects[i].Children[j]);
+            }
+
+            ExtractOperation* operations = new ExtractOperation[children.size()];
+            printf("%lu children\n", objects[i].ChildrenCount);
+            printf("real children %lu\n", children.size());
+
+            ExtractObject(operations, children, stream);
             
             delete[] operations;
         }
@@ -363,11 +454,11 @@ void Deweave_SI(std::ifstream* stream, char* outDestination)
 
             FixPadding(stream);
 
-            ExtractOperation* operations = new ExtractOperation[1];
-            operations[0].stream = std::ofstream(objects[i].Name, std::ios_base::binary);
-            operations[0].streamID = objects[i].StreamID;
+            std::vector<MxObject> object;
+            object.push_back(objects[i]);
 
-            ExtractObject(operations, &objects[i], 1, stream);
+            ExtractOperation* operations = new ExtractOperation[object.size()];
+            ExtractObject(operations, object, stream);
 
             delete[] operations;
         }
@@ -395,7 +486,10 @@ void Deweave_SI(std::ifstream* stream, char* outDestination)
             continue;
         }
 
-        XMLNode* pObject = doc.NewElement("Object");
+        XMLElement* pObject = doc.NewElement("Object");
+        if (objects[i].Weaved == true) {
+            pObject->SetAttribute("Weave", true);
+        }
 
         XMLElement* type = doc.NewElement("Type");
         type->SetText(ObjectDefToString(objects[i].ObjectType));
@@ -438,19 +532,39 @@ void Deweave_SI(std::ifstream* stream, char* outDestination)
     
 }
 
+void AddPadding(std::ofstream* outStream, MxHeader header, int buffer)
+{
+    uint32_t paddingSize = 0;
+
+    outStream->seekp(0, std::ios::end);
+    uint32_t fileSize = ((uint32_t)outStream->tellp());
+
+    // Calculate size of padding (remove padding header)
+    paddingSize = (header.BufferSize - fileSize) - 8;
+
+    // Write padding header
+    SubchunkHeader padHeader = { ' dap', paddingSize };
+    outStream->write((char*)&padHeader, sizeof(SubchunkHeader));
+
+    FillCharacter(outStream, 0xCD, paddingSize);
+}
+
+void WriteObject(std::ofstream* outStream, XMLElement* object) {
+
+}
+
 void Weave_SI(std::ofstream* outStream, char* inputFile) {
     // Open XML document
     XMLDocument doc;
     XMLError eResult = doc.LoadFile(inputFile);
     XMLNode* root = doc.FirstChild();
 
-    // Write RIFF header (wait to input file size)
-    RiffHeader riffHeader = {};
-    riffHeader.Signature = RIFFHEADER_TAG;
-    riffHeader.Size = 0xFFFFFFFF;
-    riffHeader.Subtype = 'INMO';
+    int currentBuffer = 0;
 
-    outStream->write((char*)&riffHeader, sizeof(RiffHeader));
+    // Write RIFF header (wait to input file size)
+    RIFF riffHeader;
+    riffHeader.Format = 'INMO';
+    riffHeader.Serialize(outStream);
 
     // Write MX header
     MxHeader mxHeader = {};
@@ -475,5 +589,102 @@ void Weave_SI(std::ofstream* outStream, char* inputFile) {
     MxOffsets mxOffsets = {};
     mxOffsets.Signature = MXOFFSETS_TAG;
 
-    // Write file size to RIFF header
+    std::vector<XMLElement*> weavedObjects;
+
+    // Iterate though object count, find objects intended to be weaved, and add them to the offset list.
+    for (XMLElement* child = root->FirstChildElement("Object"); child; child = child->NextSiblingElement("Object")) {
+        if (child->BoolAttribute("Weave") == true) {
+            weavedObjects.push_back(child);
+        }
+
+        mxOffsets.NumOfObjects++;
+    }
+
+    mxOffsets.ChunkSize = 4 + (weavedObjects.size() * 4);
+    outStream->write((char*)&mxOffsets, sizeof(MxOffsets));
+
+    for (unsigned int i = 0; i < weavedObjects.size(); i++) {
+        uint32_t offsetPad = 0;
+        outStream->write((char*)&offsetPad, sizeof(uint32_t));
+    }
+
+    // MxStreams LIST
+    unsigned int streamListOffset = (int)outStream->tellp();
+
+    SubchunkHeader streamListHeader = { 'TSIL', 0xFFFFFFFF };
+    outStream->write((char*)&streamListHeader, sizeof(SubchunkHeader));
+
+    uint32_t streamListIdentifier = 'tSxM';
+    outStream->write((char*)&streamListIdentifier, sizeof(uint32_t));
+
+    uint32_t streamIDs = 0;
+
+    std::vector<uint32_t> streamOffsets;
+    for (unsigned int i = 0; i < weavedObjects.size(); i++) {
+        streamOffsets.push_back((uint32_t)outStream->tellp());
+
+        Subchunk streamSubchunk;
+        streamSubchunk.Identifier = 'tSxM';
+        streamSubchunk.Serialize(outStream);
+
+        // Start writing object
+        uint32_t objectOffset = (uint32_t)outStream->tellp();
+        MxObject object = {};
+
+        object.Signature = 'bOxM';
+        object.ObjectSize = 0xFFFFFFFF;
+        object.ObjectType = StringToObjectDef(weavedObjects[i]->FirstChildElement("Type")->GetText());
+
+        if (auto handler = weavedObjects[i]->FirstChildElement("HandlerClass")) {
+            object.HandlerClass = _strdup(handler->GetText());
+        }
+
+        object.Name = _strdup(weavedObjects[i]->FirstChildElement("Name")->GetText());
+
+        printf("Adding object: %s\n", object.Name);
+
+        object.StreamID = streamIDs;
+        streamIDs++;
+
+        outStream->write((char*)&object.Signature, sizeof(uint32_t));
+        outStream->write((char*)&object.ObjectSize, sizeof(uint32_t));
+        outStream->write((char*)&object.ObjectType, sizeof(uint16_t));
+        printf("%lu\n", (uint32_t)outStream->tellp());
+        
+        if (object.HandlerClass != NULL) {
+            StoreName(outStream, object.HandlerClass);
+        }
+        StoreName(outStream, object.Name);
+
+        uint32_t objectSize = (uint32_t)outStream->tellp() - objectOffset + 8;
+        outStream->seekp(objectOffset + 4, std::ios::beg);
+        outStream->write((char*)&objectSize, sizeof(uint32_t));
+
+        // objectSubchunk.SubchunkSize = (uint32_t)outStream->tellp() - objectOffset + 8;
+        // objectSubchunk.Serialize(outStream);
+
+        streamSubchunk.SubchunkSize = (uint32_t)outStream->tellp() - streamOffsets.back() + 8;
+        streamSubchunk.Serialize(outStream);
+
+        outStream->seekp(0, std::ios::end);
+    }
+
+    // Add padding based on remainder of the buffer
+    AddPadding(outStream, mxHeader, currentBuffer);
+
+    // Write MxStream list size
+    outStream->seekp(0, std::ios::end);
+    int fileSize = ((int)outStream->tellp());
+
+    int streamListSize = fileSize - streamListOffset + 8;
+
+    outStream->seekp(streamListOffset + 4, std::ios::beg);
+    outStream->write((char*)&streamListSize, sizeof(uint32_t));
+
+    // Populate stream offsets
+    outStream->seekp(44, std::ios::beg);
+    outStream->write((char*)&streamOffsets.front(), sizeof(uint32_t) * streamOffsets.size());
+
+    riffHeader.ChunkSize = fileSize;
+    riffHeader.Serialize(outStream);
 }

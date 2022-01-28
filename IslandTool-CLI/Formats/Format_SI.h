@@ -26,14 +26,21 @@ File name: Format_SI.h
 
 #define MX_FLAG_DEFAULT        MX_FLAG_UNKNOWN | MX_FLAG_LOOP_NONE
 
-#define RIFFHEADER_TAG 'FFIR'
-struct RiffHeader {
-    uint32_t   Signature;       // "RIFF"
-    uint32_t   Size;
-    uint32_t   Subtype;         // In the case of any Interleaf files, this will be "OMNI"
+
+
+// Subchunk tags
+#define MXHEADER_TAG 'dHxM'
+#define MXOFFSETS_TAG 'fOxM'
+#define MXSTREAM_TAG 'tSxM'
+#define MXCHUNK_TAG 'hCxM'
+#define MXOBJECT_TAG 'bOxM'
+#define MXLIST_TAG 'TSIL'
+
+struct SubchunkHeader {
+    uint32_t  Signature;
+    uint32_t  ChunkSize;
 };
 
-#define MXHEADER_TAG 'dHxM'
 struct MxHeader {
     uint32_t   Signature;       // "MxHd"
     uint32_t   ChunkSize;
@@ -43,20 +50,17 @@ struct MxHeader {
     uint32_t   BufferCount;     // Number of buffers? Not sure how this is applied.
 };
 
-#define MXOFFSETS_TAG 'fOxM'
 struct MxOffsets {
     uint32_t   Signature;       // "MxOf"
     uint32_t   ChunkSize;
     uint32_t   NumOfObjects;    // Total number of objects defined in the .SI file
 };
 
-#define MXSTREAM_TAG 'tSxM'
 struct MxStream {
     uint32_t   Signature;       // "MxSt"
     uint32_t   StreamSize;
 };
 
-#define MXCHUNK_TAG 'hCxM'
 #include <pshpack1.h>
 struct MxChunk {
     uint32_t   Signature;       // "MxCh"
@@ -109,15 +113,35 @@ static const char* ObjectDefToString(ObjectDef object)
     }
 }
 
-static ObjectDef StringToObjectDef(char* name)
+static ObjectDef StringToObjectDef(const char* name)
 {
+    if (name == "Anim") {
+        return ObjectDef::Anim;
+    }
+    if (name == "Sound") {
+        return ObjectDef::Sound;
+    }
+    if (name == "Linear") {
+        return ObjectDef::Linear;
+    }
+    if (name == "Parallel") {
+        return ObjectDef::Parallel;
+    }
+    if (name == "Event") {
+        return ObjectDef::Event;
+    }
+    if (name == "Bitmap") {
+        return ObjectDef::Bitmap;
+    }
+    if (name == "Object") {
+        return ObjectDef::Object;
+    }
     return ObjectDef::Unknown;
 }
 
 #define MX_DURATION_INDEFINITE 0xFFFFFFFF
 
 // MxObject is very flexible size wise.
-#define MXOBJECT_TAG 'bOxM'
 struct MxObject {
     uint32_t  Signature;        // "MxOb"
     uint32_t  ObjectSize;       // When this is Linear or Parallel, it also accounts for children's sizes.
@@ -134,8 +158,8 @@ struct MxObject {
     Vector3   Direction;        // Defaults to Vector3(0, 0, 1)
     Vector3   Up;               // Defaults to Vector3(0, 1, 0)
     uint16_t  ExtraData_Size;   // If size is 0, ExtraData is NULL.
-    char* ExtraData;
-    char* FileName;             // Will be NULL if ObjectType is Parallel or Linear
+    char*     ExtraData;
+    char*     FileName;         // Will be NULL if ObjectType is Parallel or Linear
 
     // File attributes
     uint32_t  Unknown2[3];
@@ -148,24 +172,18 @@ struct MxObject {
     int       Offset;           // Offset in file
     bool      Weaved = false;   // If this is a root object, this is TRUE.
 
-    uint32_t  ChildrenCount;
+    uint32_t  ChildrenCount = 0;
     MxObject* Children;
 };
 
 // The chunk size REALLY likes to be divisible by 2.
 // So much so, that it adds random bytes to the end of 
 // other structures.
-#define MXLIST_TAG 'TSIL'
 struct MxList {
     uint32_t  Signature; // "LIST"
     uint32_t  ChunkSize;
     uint32_t  ChunkSignature;
     uint32_t  NumberOfObjects;
-};
-
-struct MxList_Small {
-    uint32_t  Signature; // "LIST"
-    uint32_t  ChunkSize;
 };
 
 void Deweave_SI(std::ifstream* stream, char* outDestination);

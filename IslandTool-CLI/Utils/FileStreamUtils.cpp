@@ -42,6 +42,25 @@ char* GetNextString(std::ifstream* stream) {
     return stringToGet;
 }
 
+void FillCharacter(std::ofstream* outStream, uint8_t byte, size_t size)
+{
+    for (size_t i = 0; i < size; i++) {
+        outStream->write((char*)&byte, sizeof(uint8_t));
+    }
+}
+
+void StoreName(std::ofstream* outStream, char* name)
+{
+    uint32_t stringSize = strlen(name);
+    if (stringSize < 16) {
+        uint32_t padding = 15 - stringSize;
+        FillCharacter(outStream, 0x00, padding);
+    }
+
+    // Write the object to the stream
+    outStream->write(name, stringSize + 1);
+}
+
 void FixPadding(std::ifstream* stream)
 {
     uint8_t character;

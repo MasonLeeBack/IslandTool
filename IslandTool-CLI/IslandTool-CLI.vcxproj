@@ -102,6 +102,8 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Create</PrecompiledHeader>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -116,6 +118,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -130,6 +134,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,6 +150,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -172,11 +180,17 @@
     <ClInclude Include="Classes\MxCompositeMediaPresenter.h" />
     <ClInclude Include="Classes\MxControlPresenter.h" />
     <ClInclude Include="Classes\MxSerializable.h" />
+    <ClInclude Include="Formats\Format_ANI.h" />
+    <ClInclude Include="Formats\Format_FLC.h" />
+    <ClInclude Include="Formats\Format_MOD.h" />
     <ClInclude Include="Formats\Format_SI.h" />
     <ClInclude Include="Formats\Format_WDB.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="ThirdParty\tinyxml2\tinyxml2.h" />
+    <ClInclude Include="Types\IslandToolSerializable.h" />
+    <ClInclude Include="Types\IslandToolTypes.h" />
     <ClInclude Include="Types\OmniTypes.h" />
+    <ClInclude Include="Types\RIFFTypes.h" />
     <ClInclude Include="Utils\FileStreamUtils.h" />
   </ItemGroup>
   <ItemGroup>
@@ -184,6 +198,9 @@
     <ClCompile Include="IslandTool.cpp" />
     <ClCompile Include="Formats\Format_SI.cpp" />
     <ClCompile Include="ThirdParty\tinyxml2\tinyxml2.cpp" />
+    <ClCompile Include="Types\IslandToolSerializable.cpp" />
+    <ClCompile Include="Types\OmniTypes.cpp" />
+    <ClCompile Include="Types\RIFFTypes.cpp" />
     <ClCompile Include="Utils\FileStreamUtils.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

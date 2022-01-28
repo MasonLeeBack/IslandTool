@@ -11,14 +11,15 @@ File name: stdafx.h
 #define _STDAFX_H_
 
 #include <stdint.h>
-
 #include <iostream>
 #include <fstream>
+#include <vector>
+#include <regex>
 
 #include <Utils/FileStreamUtils.h>
 #include <ThirdParty/tinyxml2/tinyxml2.h>
 
-#include <Types/OmniTypes.h>
+#include <Types/IslandToolTypes.h>
 
 #include <Formats/Format_SI.h>
 #include <Formats/Format_WDB.h>

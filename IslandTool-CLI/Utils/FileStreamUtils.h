@@ -11,6 +11,8 @@ File name: FileStreamUtils.h
 #define _FILESTREAMUTILS_H_
 
 char* GetNextString(std::ifstream* stream);
+void FillCharacter(std::ofstream* outStream, uint8_t byte, size_t size);
+void StoreName(std::ofstream* outStream, char* name);
 void FixPadding(std::ifstream* stream);
 
 #endif // _FILESTREAMUTILS_H_
